@@ -4,6 +4,8 @@
 
 ## 使用方法
 
+根据从[Release](https://github.com/M4tsuri/xyb_signer/releases)页面下载对应的程序并解压。
+
 按照`config_template.txt`中的内容编辑配置文件，双击**同一目录下**的可执行文件即可。可以设置定时任务每天触发。
 
 初次使用需要进行一定的交互，大致如下：

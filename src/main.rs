@@ -27,8 +27,7 @@ async fn main() {
 
 async fn main_loop() -> Result<(), SignerError> {
     let times = usize::from_str_radix(
-        &std::env::args().nth(1)
-            .ok_or(SignerError::ConfigError("usage: ./xyb_signer number_of_signing_days"))?,
+        &std::env::args().nth(1).get_or_insert("1".into()),
         10
     ).or(Err(SignerError::ConfigError("arg must be an integer")))?;
 

@@ -1,8 +1,8 @@
 use std::{fs::read_to_string, io::{stdout, Write, stdin}};
 
-use json::JsonValue;
+use json::{JsonValue, object};
 
-use crate::{error::SignerError, login::{check_login_status, self}, CLIENT};
+use crate::{error::SignerError, login::{check_login_status, self}, utils::checked_post};
 use crate::api::*;
 
 #[derive(Debug, Default)]
@@ -73,7 +73,7 @@ async fn setup_train_id(config: &mut JsonValue, ctx: &mut Context) -> Result<(),
     let mut buf = String::new();
     stdin().read_line(&mut buf)?;
 
-    let proj_idx = usize::from_str_radix(&buf[..buf.len() - 1], 10)
+    let proj_idx = usize::from_str_radix(&buf.trim(), 10)
         .or(Err(SignerError::InvalidInput))?;
     let proj = &projects[proj_idx];
     
@@ -102,11 +102,18 @@ async fn setup_sessionid(config: &mut JsonValue, ctx: &mut Context) -> Result<()
     let mobile = &ctx.username;
 
     let sessionid = if config.has_key("password") {
-        let password = format!("{:x}", md5::compute(config["password"].to_string()));
-        login::login_with_password(mobile, &password).await?
+        let password_md5 = format!("{:x}", md5::compute(config["password"].to_string()));
+        login::login_with_password(mobile, &password_md5).await?
     } else {
-        login::login_with_verify_code(mobile).await?
+        let password = login::reset_password(mobile).await?;
+        let password_md5 = format!("{:x}", md5::compute(&password));
+        config.insert("password", password)?;
+        login::login_with_password(mobile, &password_md5).await?        
     };
+
+    if !check_login_status(&sessionid).await? {
+        return Err(SignerError::EndpointError("login failed".into()))
+    }
 
     ctx.sessionid = sessionid.clone();
     config.insert("sessionid", sessionid)?;
@@ -116,32 +123,19 @@ async fn setup_sessionid(config: &mut JsonValue, ctx: &mut Context) -> Result<()
 }
 
 async fn get_train_id(sessionid: &str, plan_id: &str) -> Result<String, SignerError> {
-    let resp = CLIENT.post(EP_PLAN_INFO)
-        .header("Cookie", format!("JSESSIONID={}", sessionid))
-        .body(format!("planId={}", plan_id))
-        .send().await?
-        .text().await?;
-    let resp = json::parse(&resp)?;
-
-    let msg = resp["msg"].to_string();
-    if msg != OPER_SUCCESS_HINT {
-        return Err(SignerError::EndpointError(msg))
-    }
+    let resp = checked_post(
+        EP_PLAN_INFO, 
+        &object! { planId: plan_id }, 
+        Some(sessionid)
+    ).await?;
 
     Ok(resp["data"]["clockVo"]["traineeId"].to_string())
 }
 
 async fn get_project_list(sessionid: &str) -> Result<Vec<ProjectInfo>, SignerError> {
-    let resp = CLIENT.post(EP_PROJ_LIST)
-        .header("Cookie", format!("JSESSIONID={}", sessionid))
-        .send().await?
-        .text().await?;
-    let resp = json::parse(&resp)?;
-
-    let msg = resp["msg"].to_string();
-    if msg != PROJ_LIST_SUCCESS_HINT {
-        return Err(SignerError::EndpointError(msg))
-    }
+    let resp = checked_post(
+        EP_PROJ_LIST, &object! {}, Some(sessionid)
+    ).await?;
 
     Ok(resp["data"].members().map(|e| {
         ProjectInfo { 

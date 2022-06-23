@@ -63,11 +63,11 @@ impl TokenData {
         headers.insert("m", self.hash.try_into().unwrap());
         headers.insert("s", self.plain_salt.try_into().unwrap());
         headers.insert("v", "1.7.30".try_into().unwrap());
-        headers.insert("n", "n: content,deviceName,keyWord,blogBody,blogTitle,getType,responsibilities,street,text,reason,searchvalue,key,answers,leaveReason,personRemark,selfAppraisal,imgUrl,wxname,deviceId,avatarTempPath,file,file,model,brand,system,deviceId,platform,code,openId,unionid".try_into().unwrap());
+        headers.insert("n", "content,deviceName,keyWord,blogBody,blogTitle,getType,responsibilities,street,text,reason,searchvalue,key,answers,leaveReason,personRemark,selfAppraisal,imgUrl,wxname,deviceId,avatarTempPath,file,file,model,brand,system,deviceId,platform,code,openId,unionid".try_into().unwrap());
     }
 
     /// do not use it directly, test only 
-    fn with_config(req: JsonValue, salt: [u8; SALT_LEN], timestamp: String) -> Self {
+    fn with_config(req: &JsonValue, salt: [u8; SALT_LEN], timestamp: String) -> Self {
         let mut entries: Vec<(&str, &JsonValue)> = req.entries().collect();
         entries.sort_by(|a, b| {
             a.0.cmp(b.0)
@@ -100,7 +100,7 @@ impl TokenData {
         }
     }
 
-    pub fn new(req: JsonValue) -> Self {
+    pub fn new(req: &JsonValue) -> Self {
         let timestamp = format!("{}", chrono::Utc::now().timestamp());
         Self::with_config(req, PLAIN_SALT, timestamp)
     }

@@ -1,122 +1,70 @@
-use std::io::{stdin, stdout, Write};
-
 use json::object;
-use reqwest::header::{HeaderMap, HeaderValue};
 
 use crate::error::SignerError;
-use crate::secret::TokenData;
-use crate::utils::json_to_urlencoded;
+use crate::utils::{checked_post, get_input};
 use crate::api::*;
 
 pub async fn check_login_status(sessionid: &str) -> Result<bool, SignerError> {
-    let client = reqwest::Client::new();
-
-    let resp = client.post(EP_LOGIN_STATUS)
-        .header("content-type", "application/x-www-form-urlencoded")
-        .header("Cookie", format!("JSESSIONID={}", sessionid))
-        .send().await?
-        .text().await?;
-    let resp = json::parse(&resp)?;
+    let resp = checked_post(
+        EP_LOGIN_STATUS, &object! {}, Some(sessionid)
+    ).await?;
 
     Ok(resp["msg"] == OPER_SUCCESS_HINT)
 }
 
 pub async fn login_with_password(mobile: &str, password: &str) -> Result<String, SignerError> {
-    let login_req = object! {
-        username: mobile,
-        password: password,
-        openId: "",
-        unionId: "",
-        wxname: "",
-        wxCity: "",
-        avatarTempPath: ""
-    };
-
-    let body = json_to_urlencoded(&login_req);
-    let mut headers = HeaderMap::new();
-    TokenData::new(login_req).add_to_headers(&mut headers);
-
-    let client = reqwest::Client::new();
-    let resp = client.post(EP_LOGIN_BY_PASSWD)
-        .header("content-type", "application/x-www-form-urlencoded")
-        .headers(headers)
-        .body(body)
-        .send().await?
-        .text().await?;
-
-    let resp = json::parse(&resp)?;
-
-    let msg = resp["msg"].to_string();
-    if msg != LOGIN_SUCCESS_HINT {
-        return Err(SignerError::LoginFailed(msg))
-    }
+    let resp = checked_post(
+        EP_LOGIN_BY_PASSWD, 
+        &object! {
+            username: mobile,
+            password: password,
+            openId: "",
+            unionId: "",
+            wxname: "",
+            wxCity: "",
+            avatarTempPath: ""
+        }, 
+        None
+    ).await?;
 
     let sessionid = resp["data"]["sessionId"].to_string();
     println!("[INFO] Login success.");
     Ok(sessionid)
 }
 
-pub async fn login_with_verify_code(mobile: &str) -> Result<String, SignerError> {
-    let resp = reqwest::get(EP_GET_MOBILE_TOKEN).await?;
-    let resp = json::parse(&resp.text().await?)?;
+pub async fn reset_password(mobile: &str) -> Result<String, SignerError> {
+    print!("[INPUT] Do you want to set a password? [Y/n]: ");
+    let set: String = get_input()?;
 
-    let sessionid = resp["data"]["sessionId"].to_string();
-    let token = resp["data"]["token"].to_string();
-
-    let send_code_req = format!(
-        "mobile={}&mobileToken={}&type=9",
-        mobile,
-        token
-    );
-
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        "content-type", 
-        HeaderValue::from_str("application/x-www-form-urlencoded").unwrap()
-    );
-    headers.insert(
-        "Cookie", 
-        HeaderValue::from_str(&format!("JSESSIONID={}", sessionid)).unwrap()
-    );
-
-
-    let client = reqwest::Client::new();
-    let resp = client.post(EP_SEND_CODE)
-        .headers(headers.clone())
-        .body(send_code_req)
-        .send().await?
-        .text().await?;
-    let resp = json::parse(&resp)?;
-
-    let msg = resp["msg"].to_string();
-
-    if msg != OPER_SUCCESS_HINT {
-        return Err(SignerError::VerifyCodeError(msg))
+    if set.to_ascii_lowercase() != "y" {
+        return Err(SignerError::ConfigError("password not provided."))
     }
 
-    let mut verify_code = String::new();
+    checked_post(
+        EP_SEND_RESET_CODE, 
+        &object! {
+            authStr: mobile,
+            type: 1
+        }, 
+        None
+    ).await?;
+
     print!("[INPUT] Please input the verify code you received: ");
-    stdout().flush()?;
-    stdin().read_line(&mut verify_code)?;
+    let verify_code: String = get_input()?;
+    print!("[INPUT] Please input your new password: ");
+    let password: String = get_input()?;
+    let password_md5 = format!("{:x}", md5::compute(&password));
 
-    let login_req = format!(
-        "phone={}&username={}&verifyCode={}&openId=&unionId=&wxname=&wxCity=&avatarTempPath=",
-        mobile, mobile, &verify_code[..6]
-    );
+    checked_post(
+        EP_RESET_PASSWD, 
+        &object! {
+            authStr: mobile,
+            msgCode: verify_code,
+            newPsw: password_md5
+        }, 
+        None
+    ).await?;
 
-    let resp = client.post(EP_LOGIN_BY_MOBILE)
-        .headers(headers)
-        .body(login_req)
-        .send().await?
-        .text().await?;
-    let resp = json::parse(&resp)?;
-
-    let msg = resp["msg"].to_string();
-    if msg != LOGIN_SUCCESS_HINT_C {
-        return Err(SignerError::LoginFailed(msg))
-    }
-
-    let sessionid = resp["data"]["sessionId"].to_string();
-    println!("[INFO] Login success.");
-    Ok(sessionid)
+    println!("[INFO] Password successfully reset.");
+    Ok(password)
 }

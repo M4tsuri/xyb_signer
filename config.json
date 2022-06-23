@@ -1,0 +1,9 @@
+{
+    "username": "your_phone_number",
+    "password": "your_password",
+    "address": {
+        "text": "",
+        "lat": 0.0,
+        "lng": 0.0
+    }
+}

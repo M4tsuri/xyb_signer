@@ -1,0 +1,17 @@
+[package]
+name = "xyb_signer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = "0.11.11"
+tokio = { version = "1", features = ["full"] }
+thiserror = "1.0.31"
+json = "0.12.4"
+lazy_static = "1.4.0"
+chrono = "0.4.19"
+md5 = "0.7.0"
+urlencoding = "2.1.0"
+regex = "1"

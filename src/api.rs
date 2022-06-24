@@ -8,5 +8,3 @@ pub const EP_RESIGN: &'static str = "https://xcx.xybsyw.com/student/clock/Post!u
 pub const EP_SIGN: &'static str = "https://xcx.xybsyw.com/student/clock/Post.action";
 pub const EP_PROJ_LIST: &'static str = "https://xcx.xybsyw.com/student/progress/ProjectList.action";
 pub const EP_PLAN_INFO: &'static str = "https://xcx.xybsyw.com/student/clock/GetPlan!getDefault.action";
-
-pub const OPER_SUCCESS_HINT: &'static str = "操作成功";

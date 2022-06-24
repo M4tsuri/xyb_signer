@@ -91,7 +91,7 @@ async fn setup_train_id(config: &mut JsonValue, ctx: &mut Context) -> Result<(),
 async fn setup_sessionid(config: &mut JsonValue, ctx: &mut Context) -> Result<(), SignerError> {
     if config.has_key("sessionid") {
         let sessionid = config["sessionid"].to_string();
-        if check_login_status(&sessionid).await? {
+        if let Ok(_) = check_login_status(&sessionid).await {
             println!("[INFO] Session is still alive, reuse it.");
 
             ctx.sessionid = sessionid;
@@ -111,9 +111,7 @@ async fn setup_sessionid(config: &mut JsonValue, ctx: &mut Context) -> Result<()
         login::login_with_password(mobile, &password_md5).await?        
     };
 
-    if !check_login_status(&sessionid).await? {
-        return Err(SignerError::EndpointError("login failed".into()))
-    }
+    check_login_status(&sessionid).await?;
 
     ctx.sessionid = sessionid.clone();
     config.insert("sessionid", sessionid)?;

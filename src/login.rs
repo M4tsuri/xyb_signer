@@ -4,12 +4,11 @@ use crate::error::SignerError;
 use crate::utils::{checked_post, get_input};
 use crate::api::*;
 
-pub async fn check_login_status(sessionid: &str) -> Result<bool, SignerError> {
-    let resp = checked_post(
+pub async fn check_login_status(sessionid: &str) -> Result<(), SignerError> {
+    checked_post(
         EP_LOGIN_STATUS, &object! {}, Some(sessionid)
     ).await?;
-
-    Ok(resp["msg"] == OPER_SUCCESS_HINT)
+    Ok(())
 }
 
 pub async fn login_with_password(mobile: &str, password: &str) -> Result<String, SignerError> {

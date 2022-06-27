@@ -17,11 +17,11 @@
 [INFO] Password successfully reset.
 [INFO] Login success.
 [INFO] New sessionid saved.
-[INFO] Project list retrived: 
+[INFO] Project list retrieved: 
         0. project 1
         1. project 2
 [INPUT] Choose a project: 0
-[INFO] Retriving traineeId for project...done (id = 114514)
+[INFO] Retrieving traineeId for project...done (id = 114514)
 [SUCCESS] successfully signed.
 ```
 

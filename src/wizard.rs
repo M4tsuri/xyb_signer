@@ -64,7 +64,7 @@ async fn setup_train_id(config: &mut JsonValue, ctx: &mut Context) -> Result<(),
 
     // list all projects
     let projects = get_project_list(&ctx.sessionid).await?;
-    println!("[INFO] Project list retrived: ");
+    println!("[INFO] Project list retrieved: ");
     projects.iter().enumerate().for_each(|(idx, p)| {
         println!("\t{}. {}", idx, p.name)
     });
@@ -77,7 +77,7 @@ async fn setup_train_id(config: &mut JsonValue, ctx: &mut Context) -> Result<(),
         .or(Err(SignerError::InvalidInput))?;
     let proj = &projects[proj_idx];
     
-    print!("[INFO] Retriving traineeId for project...");
+    print!("[INFO] Retrieving traineeId for project...");
     let train_id = get_train_id(&ctx.sessionid, &proj.plan_id).await?;
     println!("done (id = {})", train_id);
 
